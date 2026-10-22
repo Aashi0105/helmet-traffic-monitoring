@@ -68,12 +68,9 @@ class DetectionPipelineTestCase(unittest.TestCase):
         self.assertIn("evidence_path", data)
         self.assertIn("summary", data)
 
-        # Verify helmet classification structure
-        self.assertGreaterEqual(len(data["helmet_classification"]), 1)
-        first_det = data["helmet_classification"][0]
-        self.assertIn("box", first_det)
-        self.assertIn("label", first_det)
-        self.assertIn("confidence", first_det)
+        # Verify mock mode returns empty helmet detection list (no arbitrary fabricated bounding boxes)
+        self.assertEqual(len(data["helmet_classification"]), 0)
+        self.assertIn("[Simulated Test]", data["summary"])
 
         # Verify database record persistence
         violation = data["violation"]

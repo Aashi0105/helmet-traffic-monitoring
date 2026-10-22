@@ -46,17 +46,15 @@ class MockHelmetDetector(BaseHelmetDetector):
     and database storage without falsely presenting results as genuine AI predictions.
     """
 
+    def __init__(self, test_detections: Optional[list[dict]] = None):
+        self.test_detections = test_detections or []
+
     def predict(self, image: np.ndarray, conf_threshold: float = 0.25) -> list[dict]:
-        h, w = image.shape[:2]
-        # Return a deterministic test proposal clearly flagged as simulated
-        return [
-            {
-                "box": [int(w * 0.3), int(h * 0.1), int(w * 0.5), int(h * 0.4)],
-                "label": "Without Helmet",
-                "confidence": 0.88,
-                "is_mock": True,
-            }
-        ]
+        """Returns an empty helmet detection list in mock mode unless valid test coordinates
+
+        are explicitly supplied. Never implies a fabricated location is a genuine detection.
+        """
+        return list(self.test_detections)
 
 
 class LiveHelmetDetector(BaseHelmetDetector):
@@ -75,14 +73,17 @@ class LiveHelmetDetector(BaseHelmetDetector):
         )
 
 
-def get_helmet_detector(force_mock: bool = False) -> tuple[BaseHelmetDetector, str, bool]:
+def get_helmet_detector(
+    force_mock: bool = False,
+    test_detections: Optional[list[dict]] = None,
+) -> tuple[BaseHelmetDetector, str, bool]:
     """Factory function returning the active detector, status message, and mock flag.
 
     - When final trained weights exist at FINAL_TRAINED_WEIGHTS_PATH, they are used.
     - If force_mock is requested or final model is not yet trained, mock/interim mode is used.
     """
     if force_mock:
-        return MockHelmetDetector(), "mock_inference_mode", True
+        return MockHelmetDetector(test_detections=test_detections), "mock_inference_mode", True
 
     if os.path.exists(FINAL_TRAINED_WEIGHTS_PATH):
         return LiveHelmetDetector(FINAL_TRAINED_WEIGHTS_PATH), "final_trained_model_active", False
@@ -92,7 +93,7 @@ def get_helmet_detector(force_mock: bool = False) -> tuple[BaseHelmetDetector, s
         detector = LiveHelmetDetector()
         return detector, "interim_weights_unverified", False
     except Exception:
-        return MockHelmetDetector(), "mock_fallback_mode", True
+        return MockHelmetDetector(test_detections=test_detections), "mock_fallback_mode", True
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +120,8 @@ def annotate_frame(
         cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
 
         prefix = "[MOCK] " if is_mock else ""
-        tag = f"{prefix}{label} ({conf:.2f})"
+        clean_label = "With Helmet" if is_compliant else "Without Helmet"
+        tag = f"{prefix}Helmet: {clean_label} ({conf:.2f})"
         cv2.putText(
             annotated,
             tag,
@@ -133,13 +135,13 @@ def annotate_frame(
     # Draw license plate detections
     for plate in plate_detections:
         x1, y1, x2, y2 = plate["plate_box"]
-        plate_text = plate["plate_text"] or "Plate"
-        conf = plate["detector_confidence"]
+        plate_text = plate.get("plate_text") or "Plate"
+        conf = plate.get("detector_confidence", 0.0)
 
         color = (255, 200, 0)  # Cyan/Yellow
         cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
 
-        tag = f"Plate: {plate_text} ({conf:.2f})"
+        tag = f"Number Plate: {plate_text} ({conf:.2f})"
         cv2.putText(
             annotated,
             tag,
@@ -160,6 +162,7 @@ def analyze_traffic_image(
     detection_source: str = "camera_upload",
     conf_threshold: float = 0.2,
     force_mock: bool = False,
+    test_detections: Optional[list[dict]] = None,
 ) -> dict:
     """Execute model inference workflow:
 
@@ -176,7 +179,10 @@ def analyze_traffic_image(
         raise ValueError("Invalid or corrupted image format. Unable to decode image.")
 
     # 1. Helmet Detection
-    detector, model_status, is_mock = get_helmet_detector(force_mock=force_mock)
+    detector, model_status, is_mock = get_helmet_detector(
+        force_mock=force_mock,
+        test_detections=test_detections,
+    )
     helmet_detections = detector.predict(image, conf_threshold=conf_threshold)
 
     # 2. License Plate Detection & OCR
@@ -236,7 +242,14 @@ def analyze_traffic_image(
     db.refresh(violation)
 
     # 7. Summary Message
-    if not helmet_detected:
+    if is_mock:
+        if has_without_helmet:
+            summary = f"[Simulated Test] Simulated violation (no helmet). Plate: {primary_plate or 'None'}"
+        elif has_with_helmet:
+            summary = f"[Simulated Test] Simulated compliant. Plate: {primary_plate or 'None'}"
+        else:
+            summary = f"[Simulated Test] Model training in progress (no helmet detected). Plate: {primary_plate or 'None'}"
+    elif not helmet_detected:
         summary = f"Potential violation: Rider without helmet. Plate: {primary_plate or 'Unreadable'}"
     elif has_with_helmet:
         summary = f"Compliant: Rider wearing helmet. Plate: {primary_plate or 'Unreadable'}"

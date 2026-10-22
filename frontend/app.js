@@ -101,6 +101,12 @@ function setupEventListeners() {
   document.getElementById("evidenceModal").addEventListener("click", (e) => {
     if (e.target.id === "evidenceModal") closeModal();
   });
+
+  // Ensure mock mode is explicitly unchecked by default
+  const mockCheckbox = document.getElementById("mockModeCheckbox");
+  if (mockCheckbox) {
+    mockCheckbox.checked = false;
+  }
 }
 
 // -------------------------------------------------------------
@@ -285,9 +291,8 @@ async function handleImageAnalysis(file) {
   formData.append("file", file);
   formData.append("detection_source", "dashboard_studio");
   formData.append("conf_threshold", "0.2");
-  if (mockCheckbox && mockCheckbox.checked) {
-    formData.append("use_mock", "true");
-  }
+  const useMock = Boolean(mockCheckbox && mockCheckbox.checked);
+  formData.append("use_mock", useMock ? "true" : "false");
 
   try {
     const res = await fetch(`${API_BASE}/api/detections/analyze`, {
