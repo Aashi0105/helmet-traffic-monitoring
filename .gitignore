@@ -1,10 +1,34 @@
+
+# Python virtual environments
 .venv/
 venv/
+backend/.venv/
+backend/venv/
+
+# Python cache and test files
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+
+# Environment secrets
 .env
 .env.*
 !.env.example
+!backend/.env.example
+
+# Datasets and generated output
 datasets/
 dataset/
 output_annotated.jpg
+
+# Evidence files (keep the placeholder)
+backend/evidence/*
+!backend/evidence/.gitkeep
+
+# Frontend dependencies and builds
+node_modules/
+dist/
+build/
+
+# macOS
+.DS_Store
