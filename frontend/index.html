@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Helmet Traffic Monitoring — Operations Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">🛡️</div>
+      <div>
+        <div class="brand-title">Helmet Compliance & Traffic Monitoring System</div>
+        <div class="brand-subtitle">Smart City Traffic Operations • Vadodara</div>
+      </div>
+    </div>
+    <div class="nav-status">
+      <div class="status-indicator">
+        <div class="dot" id="healthDot"></div>
+        <span id="healthText">Checking backend status...</span>
+      </div>
+      <a href="/docs" target="_blank" class="btn-secondary" style="text-decoration:none; font-size:0.8rem;">Swagger API Docs</a>
+    </div>
+  </header>
+
+  <main class="dashboard-container">
+
+    <!-- Model Status & Training Banner -->
+    <div class="model-status-banner" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.25rem;">⏳</span>
+        <div>
+          <div style="font-size: 0.88rem; font-weight: 700; color: #FBBF24;">
+            Helmet Model: Final Training In Progress
+          </div>
+          <div style="font-size: 0.78rem; color: #CBD5E1; margin-top: 2px;">
+            Inference in this interface is for workflow testing only and does not represent validated final-model predictions. Final trained weights will be integrated upon training completion.
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="badge badge-pending">Training In Progress</span>
+      </div>
+    </div>
+
+    <!-- KPI Statistics Grid -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Detections <span>📊</span></div>
+        <div class="kpi-value" id="statTotal">--</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Violations Flagged <span>⚠️</span></div>
+        <div class="kpi-value violations" id="statViolations">--</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Helmet Compliant <span>✅</span></div>
+        <div class="kpi-value compliant" id="statCompliant">--</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pending Review <span>⏳</span></div>
+        <div class="kpi-value pending" id="statPending">--</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Approved Records <span>✔</span></div>
+        <div class="kpi-value" id="statApproved" style="color:var(--accent-emerald);">--</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Rejected Records <span>✖</span></div>
+        <div class="kpi-value" id="statRejected" style="color:var(--accent-rose);">--</div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" data-tab="violations">📋 Violation Records & Audit Log</button>
+      <button class="tab-btn" data-tab="studio">📷 Frame Analysis Studio (YOLOv8 + OCR)</button>
+    </div>
+
+    <!-- TAB 1: Violation Log & Table -->
+    <section class="tab-content active" id="violations-tab">
+      <div class="card-panel">
+        <div class="panel-header">
+          <div class="panel-title">Logged Violations & Evidence Feed</div>
+          
+          <div class="filter-bar">
+            <input type="text" id="searchInput" placeholder="🔍 Search Plate (e.g. GJ-06, MDY)..." />
+            
+            <select id="statusFilter">
+              <option value="">All Review Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+
+            <select id="complianceFilter">
+              <option value="">All Helmet Statuses</option>
+              <option value="false">Without Helmet (Violation)</option>
+              <option value="true">With Helmet (Compliant)</option>
+            </select>
+
+            <button class="btn-secondary" onclick="loadViolations()">🔄 Refresh</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="violation-table">
+            <thead>
+              <tr>
+                <th>Record ID</th>
+                <th>Evidence Crop</th>
+                <th>Vehicle Number Plate</th>
+                <th>Compliance Status</th>
+                <th>Review Status</th>
+                <th>Detection Source</th>
+                <th>Timestamp</th>
+                <th>Review Action</th>
+              </tr>
+            </thead>
+            <tbody id="violationsTableBody">
+              <!-- Populated dynamically by app.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <div id="paginationControls" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Image Analysis Studio -->
+    <section class="tab-content" id="studio-tab">
+      <div class="card-panel">
+        <div class="panel-header">
+          <div class="panel-title">Upload & Test Traffic Frame</div>
+          <div style="font-size:0.82rem; color:var(--text-secondary);">Pipeline Testing Mode • Detection Inference + EasyOCR Workflow</div>
+        </div>
+
+        <div class="upload-grid">
+          <!-- Drop zone -->
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📸</div>
+            <h3 style="font-size:1.1rem; color:#ffffff; margin-bottom:6px;">Upload or Drag & Drop Traffic Frame</h3>
+            <p style="font-size:0.85rem; color:var(--text-secondary); max-width:320px;">
+              Drop a street CCTV image or vehicle photo here to run the detection and OCR workflow.
+            </p>
+            <input type="file" id="fileInput" accept="image/*" style="display:none;" />
+            <button class="btn-primary" style="margin-top:16px;" onclick="document.getElementById('fileInput').click()">Select Local Image</button>
+
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:var(--text-muted); cursor:pointer; margin-top:14px;" onclick="event.stopPropagation()">
+              <input type="checkbox" id="mockModeCheckbox" />
+              <span>Use Simulated Mock Mode (for safe workflow testing)</span>
+            </label>
+          </div>
+
+          <!-- Analysis Results Panel -->
+          <div class="preview-container" id="analysisResultPanel" style="display:none;">
+            <div id="analysisStatusMsg" style="font-size:0.9rem; font-weight:600;"></div>
+            <img id="analyzedPreviewImg" class="preview-image" alt="Detection Output" />
+            <div id="analysisDetailsBox"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Evidence Review Modal -->
+  <div class="modal-backdrop" id="evidenceModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle" style="color:#ffffff; font-size:1.15rem;">Violation Review</h3>
+        <button class="close-btn" id="closeModalBtn">&times;</button>
+      </div>
+      <div>
+        <img id="modalEvidenceImg" class="preview-image" style="width:100%; max-height:450px;" alt="Annotated Evidence" />
+      </div>
+      <div id="modalInfo"></div>
+      <div id="modalActions" style="display:flex; gap:12px; margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

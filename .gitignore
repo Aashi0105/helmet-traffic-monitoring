@@ -20,6 +20,7 @@ __pycache__/
 datasets/
 dataset/
 output_annotated.jpg
+presentation.html
 
 # Evidence files (keep the placeholder)
 backend/evidence/*
