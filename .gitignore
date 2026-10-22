@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Evidence files
+backend/evidence/*
+!backend/evidence/.gitkeep
+
+# Frontend dependencies and builds
+node_modules/
+dist/
+build/
+
+# macOS
+.DS_Store
